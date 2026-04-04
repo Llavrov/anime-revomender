@@ -83,7 +83,7 @@ type ShikimoriRate = {
 async function seedGenres() {
   console.log("Fetching genres...");
   const genres = await fetchShikimori<ShikimoriGenre[]>("/genres");
-  const animeGenres = genres.filter((g) => g.kind === "anime");
+  const animeGenres = genres.filter((g) => g.kind === "anime" || g.kind === "genre");
 
   const { error } = await supabase.from("genres").upsert(
     animeGenres.map((g) => ({ id: g.id, name: g.name, russian: g.russian }))
@@ -137,7 +137,7 @@ async function seedAnime() {
         });
       }
 
-      for (const genre of anime.genres.filter((g) => g.kind === "anime")) {
+      for (const genre of anime.genres) {
         await supabase.from("anime_genres").upsert({
           anime_id: anime.id,
           genre_id: genre.id,
@@ -162,7 +162,7 @@ async function seedUserRates() {
     const rates = await fetchShikimori<ShikimoriRate[]>(
       `/users/${SHIKIMORI_USER_ID}/anime_rates?limit=50&page=${page}`
     );
-    if (rates.length === 0) break;
+    if (!rates || rates.length === 0) break;
 
     for (const rate of rates) {
       const { data: existing } = await supabase
@@ -191,7 +191,7 @@ async function seedUserRates() {
           shikimori_url: `https://shikimori.one${anime.url}`,
           fetched_at: new Date().toISOString(),
         });
-        for (const genre of anime.genres.filter((g) => g.kind === "anime")) {
+        for (const genre of anime.genres) {
           await supabase.from("anime_genres").upsert({
             anime_id: anime.id,
             genre_id: genre.id,

@@ -102,7 +102,7 @@ async function syncUserRates() {
           shikimori_url: `https://shikimori.one${anime.url}`,
           fetched_at: new Date().toISOString(),
         });
-        for (const genre of anime.genres.filter((g) => g.kind === "anime")) {
+        for (const genre of anime.genres) {
           await supabase.from("anime_genres").upsert({
             anime_id: anime.id,
             genre_id: genre.id,
