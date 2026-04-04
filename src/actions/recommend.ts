@@ -112,8 +112,10 @@ export async function getRecommendations(limit: number = 20): Promise<Recommende
     ),
   }));
 
-  scored.sort((a, b) => b.recommendation_score - a.recommendation_score);
-  return scored.slice(0, limit);
+  // Filter out obvious non-matches (score < 0.3)
+  const filtered = scored.filter((a) => a.recommendation_score >= 0.3);
+  filtered.sort((a, b) => b.recommendation_score - a.recommendation_score);
+  return filtered.slice(0, limit);
 }
 
 export async function getCatalog(filter?: {
