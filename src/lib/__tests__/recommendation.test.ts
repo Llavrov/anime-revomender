@@ -5,7 +5,7 @@ import {
   buildKindProfile,
   computeRecommendationScore,
 } from "../recommendation";
-import type { Anime, Genre, UserRate } from "../types";
+import type { Genre } from "../types";
 
 const mockGenres: Genre[] = [
   { id: 1, name: "Action", russian: "Экшен" },

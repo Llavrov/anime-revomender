@@ -19,9 +19,9 @@ export function buildGenreProfile(ratedAnime: AnimeWithRelations[]): Profile {
     }
   }
 
-  const max = Math.max(...weights.values(), 1);
+  const max = Math.max(...Array.from(weights.values()), 1);
   const profile = new Map<number, number>();
-  for (const [id, w] of weights) {
+  for (const [id, w] of Array.from(weights.entries())) {
     profile.set(id, Math.max(0, w / max));
   }
   return profile;
@@ -44,9 +44,9 @@ export function buildStudioProfile(ratedAnime: AnimeWithRelations[]): Profile {
     }
   }
 
-  const max = Math.max(...weights.values(), 1);
+  const max = Math.max(...Array.from(weights.values()), 1);
   const profile = new Map<number, number>();
-  for (const [id, w] of weights) {
+  for (const [id, w] of Array.from(weights.entries())) {
     profile.set(id, Math.max(0, w / max));
   }
   return profile;
@@ -69,7 +69,7 @@ export function buildKindProfile(ratedAnime: AnimeWithRelations[]): Profile {
   }
 
   const profile = new Map<number, number>();
-  for (const [kindId, sum] of sums) {
+  for (const [kindId, sum] of Array.from(sums.entries())) {
     profile.set(kindId, sum / counts.get(kindId)! / 10);
   }
   return profile;
