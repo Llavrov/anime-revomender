@@ -4,6 +4,7 @@ import {
   buildStudioProfile,
   buildKindProfile,
   buildEraProfile,
+  buildTropeProfile,
   computeRecommendationScore,
 } from "../src/lib/recommendation";
 import type { AnimeWithRelations, Genre, Studio, UserRate } from "../src/lib/types";
@@ -83,12 +84,14 @@ async function main() {
   const studioProfile = buildStudioProfile(rated);
   const kindProfile = buildKindProfile(rated);
   const eraProfile = buildEraProfile(rated);
+  const tropeProfile = buildTropeProfile(rated);
 
   console.log("Computing scores...");
+  console.log("Trope profile:", Object.fromEntries(tropeProfile));
   const now = new Date().toISOString();
   const rows = allAnime.map((anime) => ({
     anime_id: anime.id,
-    score: computeRecommendationScore(anime, genreProfile, studioProfile, kindProfile, eraProfile, rated),
+    score: computeRecommendationScore(anime, genreProfile, studioProfile, kindProfile, eraProfile, tropeProfile, rated),
     computed_at: now,
   }));
 

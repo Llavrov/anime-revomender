@@ -4,6 +4,7 @@ import {
   buildStudioProfile,
   buildKindProfile,
   buildEraProfile,
+  buildTropeProfile,
   computeRecommendationScore,
 } from "../recommendation";
 import type { Genre } from "../types";
@@ -58,6 +59,16 @@ const mockAnimeCandidate = {
   user_rate: null,
 };
 
+function buildAllProfiles(rated: typeof mockAnimeRated[]) {
+  return {
+    genreProfile: buildGenreProfile(rated),
+    studioProfile: buildStudioProfile(rated),
+    kindProfile: buildKindProfile(rated),
+    eraProfile: buildEraProfile(rated),
+    tropeProfile: buildTropeProfile(rated),
+  };
+}
+
 describe("buildGenreProfile", () => {
   it("builds weighted genre vector from rated anime", () => {
     const profile = buildGenreProfile([mockAnimeRated]);
@@ -69,48 +80,22 @@ describe("buildGenreProfile", () => {
 
 describe("computeRecommendationScore", () => {
   it("returns score between 0 and 1", () => {
-    const genreProfile = buildGenreProfile([mockAnimeRated]);
-    const studioProfile = buildStudioProfile([mockAnimeRated]);
-    const kindProfile = buildKindProfile([mockAnimeRated]);
-
-    const eraProfile = buildEraProfile([mockAnimeRated]);
+    const { genreProfile, studioProfile, kindProfile, eraProfile, tropeProfile } = buildAllProfiles([mockAnimeRated]);
     const score = computeRecommendationScore(
-      mockAnimeCandidate,
-      genreProfile,
-      studioProfile,
-      kindProfile,
-      eraProfile,
-      [mockAnimeRated]
+      mockAnimeCandidate, genreProfile, studioProfile, kindProfile, eraProfile, tropeProfile, [mockAnimeRated]
     );
-
     expect(score).toBeGreaterThan(0);
     expect(score).toBeLessThanOrEqual(1);
   });
 
   it("scores franchise match higher", () => {
-    const genreProfile = buildGenreProfile([mockAnimeRated]);
-    const studioProfile = buildStudioProfile([mockAnimeRated]);
-    const kindProfile = buildKindProfile([mockAnimeRated]);
-
-    const eraProfile = buildEraProfile([mockAnimeRated]);
+    const { genreProfile, studioProfile, kindProfile, eraProfile, tropeProfile } = buildAllProfiles([mockAnimeRated]);
     const withFranchise = computeRecommendationScore(
-      mockAnimeCandidate,
-      genreProfile,
-      studioProfile,
-      kindProfile,
-      eraProfile,
-      [mockAnimeRated]
+      mockAnimeCandidate, genreProfile, studioProfile, kindProfile, eraProfile, tropeProfile, [mockAnimeRated]
     );
-
     const noFranchise = computeRecommendationScore(
-      { ...mockAnimeCandidate, franchise: "other" },
-      genreProfile,
-      studioProfile,
-      kindProfile,
-      eraProfile,
-      [mockAnimeRated]
+      { ...mockAnimeCandidate, franchise: "other" }, genreProfile, studioProfile, kindProfile, eraProfile, tropeProfile, [mockAnimeRated]
     );
-
     expect(withFranchise).toBeGreaterThan(noFranchise);
   });
 });

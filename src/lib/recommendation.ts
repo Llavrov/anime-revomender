@@ -1,6 +1,8 @@
 import type { AnimeWithRelations } from "./types";
+import { detectTropes, type Trope } from "./tropes";
 
 type Profile = Map<number, number>;
+type TropeProfile = Map<Trope, number>;
 
 export function buildEraProfile(ratedAnime: AnimeWithRelations[]): { median: number; stddev: number } {
   const years: number[] = [];
@@ -15,7 +17,7 @@ export function buildEraProfile(ratedAnime: AnimeWithRelations[]): { median: num
   const median = years[Math.floor(years.length / 2)];
   const mean = years.reduce((a, b) => a + b, 0) / years.length;
   const variance = years.reduce((sum, y) => sum + (y - mean) ** 2, 0) / years.length;
-  const stddev = Math.max(Math.sqrt(variance), 5); // minimum 5 year spread
+  const stddev = Math.max(Math.sqrt(variance), 5);
   return { median, stddev };
 }
 
@@ -92,12 +94,42 @@ export function buildKindProfile(ratedAnime: AnimeWithRelations[]): Profile {
   return profile;
 }
 
+export function buildTropeProfile(ratedAnime: AnimeWithRelations[]): TropeProfile {
+  const weights = new Map<Trope, number>();
+  const counts = new Map<Trope, number>();
+
+  for (const anime of ratedAnime) {
+    const rate = anime.user_rate;
+    if (!rate) continue;
+
+    let weight = rate.score;
+    if (weight === 0 && rate.reaction === "like") weight = 8;
+    if (weight === 0 && rate.reaction === "dislike") weight = -3;
+    if (weight === 0) continue;
+
+    const tropes = detectTropes(anime);
+    for (const trope of tropes) {
+      weights.set(trope, (weights.get(trope) ?? 0) + weight);
+      counts.set(trope, (counts.get(trope) ?? 0) + 1);
+    }
+  }
+
+  const profile = new Map<Trope, number>();
+  for (const [trope, totalWeight] of Array.from(weights.entries())) {
+    const count = counts.get(trope) ?? 1;
+    // Normalize: average weight / 10, clamped to 0-1
+    profile.set(trope, Math.max(0, Math.min(1, totalWeight / count / 10)));
+  }
+  return profile;
+}
+
 export function computeRecommendationScore(
   anime: AnimeWithRelations,
   genreProfile: Profile,
   studioProfile: Profile,
   kindProfile: Profile,
   eraProfile: { median: number; stddev: number },
+  tropeProfile: TropeProfile,
   ratedAnime: AnimeWithRelations[]
 ): number {
   // Genre affinity (0-1)
@@ -128,11 +160,11 @@ export function computeRecommendationScore(
   const rawScore = anime.score ?? 5;
   let communityScore: number;
   if (rawScore >= 8) {
-    communityScore = 0.8 + (rawScore - 8) * 0.15; // 8->0.8, 9->0.95, 9.5->1.0
+    communityScore = 0.8 + (rawScore - 8) * 0.15;
   } else if (rawScore >= 7) {
-    communityScore = 0.5 + (rawScore - 7) * 0.3; // 7->0.5, 7.5->0.65, 8->0.8
+    communityScore = 0.5 + (rawScore - 7) * 0.3;
   } else {
-    communityScore = Math.max(0, rawScore / 14); // 6->0.43, 5->0.36, harsh dropoff
+    communityScore = Math.max(0, rawScore / 14);
   }
 
   // Era affinity — gaussian decay from user's median year
@@ -145,6 +177,17 @@ export function computeRecommendationScore(
     }
   }
 
+  // Trope affinity — bonus for matching tropes
+  let tropeScore = 0;
+  const animeTropes = detectTropes(anime);
+  if (animeTropes.length > 0 && tropeProfile.size > 0) {
+    let sum = 0;
+    for (const trope of animeTropes) {
+      sum += tropeProfile.get(trope) ?? 0;
+    }
+    tropeScore = sum / animeTropes.length;
+  }
+
   // Franchise bonus
   let franchiseBonus = 0;
   if (anime.franchise) {
@@ -155,11 +198,12 @@ export function computeRecommendationScore(
   }
 
   return (
-    genreScore * 0.30 +
-    communityScore * 0.25 +
-    eraScore * 0.15 +
+    genreScore * 0.25 +
+    communityScore * 0.20 +
+    tropeScore * 0.15 +
+    eraScore * 0.12 +
+    franchiseBonus * 0.13 +
     studioScore * 0.10 +
-    kindScore * 0.05 +
-    franchiseBonus * 0.15
+    kindScore * 0.05
   );
 }

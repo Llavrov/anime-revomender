@@ -6,6 +6,7 @@ import {
   buildStudioProfile,
   buildKindProfile,
   buildEraProfile,
+  buildTropeProfile,
   computeRecommendationScore,
 } from "@/lib/recommendation";
 import type { AnimeWithRelations, RecommendedAnime, Genre, Studio, UserRate } from "@/lib/types";
@@ -99,11 +100,12 @@ export async function recomputeScores(): Promise<void> {
   const studioProfile = buildStudioProfile(rated);
   const kindProfile = buildKindProfile(rated);
   const eraProfile = buildEraProfile(rated);
+  const tropeProfile = buildTropeProfile(rated);
 
   const now = new Date().toISOString();
   const rows = allAnime.map((anime) => ({
     anime_id: anime.id,
-    score: computeRecommendationScore(anime, genreProfile, studioProfile, kindProfile, eraProfile, rated),
+    score: computeRecommendationScore(anime, genreProfile, studioProfile, kindProfile, eraProfile, tropeProfile, rated),
     computed_at: now,
   }));
 
@@ -135,10 +137,11 @@ export async function getRecommendations(limit: number = 20): Promise<Recommende
   const studioProfile = buildStudioProfile(rated);
   const kindProfile = buildKindProfile(rated);
   const eraProfile = buildEraProfile(rated);
+  const tropeProfile = buildTropeProfile(rated);
 
   const scored: RecommendedAnime[] = unrated.map((anime) => ({
     ...anime,
-    recommendation_score: computeRecommendationScore(anime, genreProfile, studioProfile, kindProfile, eraProfile, rated),
+    recommendation_score: computeRecommendationScore(anime, genreProfile, studioProfile, kindProfile, eraProfile, tropeProfile, rated),
   }));
 
   const filtered = scored.filter((a) => a.recommendation_score >= 0.45);
@@ -214,10 +217,11 @@ async function getCatalogRealtime(filter?: {
   const studioProfile = buildStudioProfile(rated);
   const kindProfile = buildKindProfile(rated);
   const eraProfile = buildEraProfile(rated);
+  const tropeProfile = buildTropeProfile(rated);
 
   const scored: RecommendedAnime[] = allAnime.map((anime) => ({
     ...anime,
-    recommendation_score: computeRecommendationScore(anime, genreProfile, studioProfile, kindProfile, eraProfile, rated),
+    recommendation_score: computeRecommendationScore(anime, genreProfile, studioProfile, kindProfile, eraProfile, tropeProfile, rated),
   }));
 
   if (!filter?.sortBy || filter.sortBy === "recommendation") {
