@@ -5,6 +5,7 @@ import {
   buildGenreProfile,
   buildStudioProfile,
   buildKindProfile,
+  buildEraProfile,
   computeRecommendationScore,
 } from "@/lib/recommendation";
 import type { AnimeWithRelations, RecommendedAnime, Genre, Studio, UserRate } from "@/lib/types";
@@ -100,6 +101,7 @@ export async function getRecommendations(limit: number = 20): Promise<Recommende
   const genreProfile = buildGenreProfile(rated);
   const studioProfile = buildStudioProfile(rated);
   const kindProfile = buildKindProfile(rated);
+  const eraProfile = buildEraProfile(rated);
 
   const scored: RecommendedAnime[] = unrated.map((anime) => ({
     ...anime,
@@ -108,12 +110,13 @@ export async function getRecommendations(limit: number = 20): Promise<Recommende
       genreProfile,
       studioProfile,
       kindProfile,
+      eraProfile,
       rated
     ),
   }));
 
-  // Filter out obvious non-matches (score < 0.3)
-  const filtered = scored.filter((a) => a.recommendation_score >= 0.3);
+  // Filter out weak matches
+  const filtered = scored.filter((a) => a.recommendation_score >= 0.45);
   filtered.sort((a, b) => b.recommendation_score - a.recommendation_score);
   return filtered.slice(0, limit);
 }
@@ -135,6 +138,7 @@ export async function getCatalog(filter?: {
   const genreProfile = buildGenreProfile(rated);
   const studioProfile = buildStudioProfile(rated);
   const kindProfile = buildKindProfile(rated);
+  const eraProfile = buildEraProfile(rated);
 
   const scored: RecommendedAnime[] = allAnime.map((anime) => ({
     ...anime,
@@ -143,6 +147,7 @@ export async function getCatalog(filter?: {
       genreProfile,
       studioProfile,
       kindProfile,
+      eraProfile,
       rated
     ),
   }));

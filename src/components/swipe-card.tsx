@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import Image from "next/image";
 import type { RecommendedAnime, Reaction } from "@/lib/types";
 import { recordSwipe } from "@/actions/swipe";
@@ -13,10 +13,11 @@ export function SwipeCard({
   onSwiped: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
-  const [exiting, setExiting] = useState<"left" | "right" | null>(null);
+  const [exiting, setExiting] = useState<"left" | "right" | "up" | "down" | null>(null);
 
-  function handleSwipe(reaction: Reaction) {
-    const direction = reaction === "like" ? "right" : reaction === "dislike" ? "left" : null;
+  const handleSwipe = useCallback(function handleSwipe(reaction: Reaction) {
+    if (isPending) return;
+    const direction = reaction === "like" ? "right" : reaction === "dislike" ? "left" : "up";
     setExiting(direction);
 
     startTransition(async () => {
@@ -26,7 +27,27 @@ export function SwipeCard({
         onSwiped();
       }, 200);
     });
-  }
+  }, [anime.id, isPending, onSwiped]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.repeat) return;
+      switch (e.key) {
+        case "ArrowRight":
+          handleSwipe("like");
+          break;
+        case "ArrowLeft":
+          handleSwipe("dislike");
+          break;
+        case "ArrowUp":
+        case "ArrowDown":
+          handleSwipe("skip");
+          break;
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleSwipe]);
 
   return (
     <div
@@ -35,7 +56,11 @@ export function SwipeCard({
           ? "-translate-x-full opacity-0"
           : exiting === "right"
             ? "translate-x-full opacity-0"
-            : ""
+            : exiting === "up"
+              ? "-translate-y-full opacity-0"
+              : exiting === "down"
+                ? "translate-y-full opacity-0"
+                : ""
       }`}
     >
       <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl">

@@ -3,6 +3,7 @@ import {
   buildGenreProfile,
   buildStudioProfile,
   buildKindProfile,
+  buildEraProfile,
   computeRecommendationScore,
 } from "../recommendation";
 import type { Genre } from "../types";
@@ -72,11 +73,13 @@ describe("computeRecommendationScore", () => {
     const studioProfile = buildStudioProfile([mockAnimeRated]);
     const kindProfile = buildKindProfile([mockAnimeRated]);
 
+    const eraProfile = buildEraProfile([mockAnimeRated]);
     const score = computeRecommendationScore(
       mockAnimeCandidate,
       genreProfile,
       studioProfile,
       kindProfile,
+      eraProfile,
       [mockAnimeRated]
     );
 
@@ -89,11 +92,13 @@ describe("computeRecommendationScore", () => {
     const studioProfile = buildStudioProfile([mockAnimeRated]);
     const kindProfile = buildKindProfile([mockAnimeRated]);
 
+    const eraProfile = buildEraProfile([mockAnimeRated]);
     const withFranchise = computeRecommendationScore(
       mockAnimeCandidate,
       genreProfile,
       studioProfile,
       kindProfile,
+      eraProfile,
       [mockAnimeRated]
     );
 
@@ -102,6 +107,7 @@ describe("computeRecommendationScore", () => {
       genreProfile,
       studioProfile,
       kindProfile,
+      eraProfile,
       [mockAnimeRated]
     );
 
