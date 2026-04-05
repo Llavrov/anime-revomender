@@ -17,10 +17,10 @@ const KIND_LABELS: Record<string, string> = {
 
 export function AnimeCard({
   anime,
-  onMarkedWatched,
+  onHideCard,
 }: {
   anime: RecommendedAnime;
-  onMarkedWatched?: (animeId: number) => void;
+  onHideCard?: (animeId: number) => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [currentReaction, setCurrentReaction] = useState<Reaction | null>(
@@ -33,7 +33,7 @@ export function AnimeCard({
     e.preventDefault();
     e.stopPropagation();
     setMarkedWatched(true);
-    onMarkedWatched?.(anime.id);
+    onHideCard?.(anime.id);
     startTransition(async () => {
       await markWatched(anime.id);
     });
@@ -44,6 +44,10 @@ export function AnimeCard({
     e.stopPropagation();
     const newReaction = currentReaction === reaction ? null : reaction;
     setCurrentReaction(newReaction);
+    // Only hide on dislike; likes stay visible
+    if (reaction === "dislike" && currentReaction !== "dislike") {
+      onHideCard?.(anime.id);
+    }
     startTransition(async () => {
       await recordSwipe(anime.id, newReaction ?? "skip");
     });

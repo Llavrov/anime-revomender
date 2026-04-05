@@ -10,7 +10,7 @@ export type CatalogFilters = {
   minScore: number;
   statuses: string[];
   sortBy: string;
-  hideWatched: boolean;
+  hideRated: boolean;
 };
 
 const KIND_LABELS: Record<string, string> = {
@@ -83,14 +83,14 @@ export function FilterBar({
 
         <div className="ml-auto">
           <button
-            onClick={() => onChange({ ...filters, hideWatched: !filters.hideWatched })}
+            onClick={() => onChange({ ...filters, hideRated: !filters.hideRated })}
             className={`rounded-full px-3 py-1 text-xs transition-colors ${
-              filters.hideWatched
+              filters.hideRated
                 ? "bg-violet-600 text-white"
                 : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
             }`}
           >
-            {filters.hideWatched ? "Просмотренное скрыто" : "Показать всё"}
+            {filters.hideRated ? "Оценённое скрыто" : "Показать всё"}
           </button>
         </div>
       </div>

@@ -12,7 +12,7 @@ const defaultFilters: CatalogFilters = {
   minScore: 0,
   statuses: [],
   sortBy: "recommendation",
-  hideWatched: true,
+  hideRated: true,
 };
 
 export default function CatalogPage() {
@@ -41,10 +41,16 @@ export default function CatalogPage() {
       );
     }
 
-    if (filters.hideWatched) {
-      filtered = filtered.filter(
-        (a) => !a.user_rate || a.user_rate.status !== "completed"
-      );
+    if (filters.hideRated) {
+      filtered = filtered.filter((a) => {
+        if (!a.user_rate) return true;
+        const r = a.user_rate;
+        // Hide if: has reaction (like/dislike/skip), has score, or marked completed
+        if (r.reaction) return false;
+        if (r.score > 0) return false;
+        if (r.status === "completed") return false;
+        return true;
+      });
     }
 
     setAnime(filtered);
@@ -57,19 +63,13 @@ export default function CatalogPage() {
   }, [load]);
 
   // Optimistically hide a card and debounce the full reload
-  const handleMarkedWatched = useCallback(
+  const handleHideCard = useCallback(
     (animeId: number) => {
-      if (filters.hideWatched) {
+      if (filters.hideRated) {
         setHiddenIds((prev) => new Set(prev).add(animeId));
       }
-
-      // Debounce: only reload 5s after the last mark
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        load();
-      }, 5000);
     },
-    [filters.hideWatched, load]
+    [filters.hideRated]
   );
 
   const visibleAnime = anime.filter((a) => !hiddenIds.has(a.id));
@@ -86,7 +86,7 @@ export default function CatalogPage() {
             <AnimeCard
               key={a.id}
               anime={a}
-              onMarkedWatched={handleMarkedWatched}
+              onHideCard={handleHideCard}
             />
           ))}
         </div>
