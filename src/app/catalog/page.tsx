@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { AnimeCard } from "@/components/anime-card";
 import { FilterBar, type CatalogFilters } from "@/components/filter-bar";
 import { getCatalog } from "@/actions/recommend";
@@ -19,6 +19,8 @@ export default function CatalogPage() {
   const [anime, setAnime] = useState<RecommendedAnime[]>([]);
   const [filters, setFilters] = useState<CatalogFilters>(defaultFilters);
   const [loading, setLoading] = useState(true);
+  const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,12 +48,31 @@ export default function CatalogPage() {
     }
 
     setAnime(filtered);
+    setHiddenIds(new Set());
     setLoading(false);
   }, [filters]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // Optimistically hide a card and debounce the full reload
+  const handleMarkedWatched = useCallback(
+    (animeId: number) => {
+      if (filters.hideWatched) {
+        setHiddenIds((prev) => new Set(prev).add(animeId));
+      }
+
+      // Debounce: only reload 5s after the last mark
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        load();
+      }, 5000);
+    },
+    [filters.hideWatched, load]
+  );
+
+  const visibleAnime = anime.filter((a) => !hiddenIds.has(a.id));
 
   return (
     <div className="px-4 pt-4">
@@ -61,12 +82,16 @@ export default function CatalogPage() {
         <div className="mt-12 text-center text-zinc-500">Загрузка...</div>
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {anime.map((a) => (
-            <AnimeCard key={a.id} anime={a} onStatusChange={load} />
+          {visibleAnime.map((a) => (
+            <AnimeCard
+              key={a.id}
+              anime={a}
+              onMarkedWatched={handleMarkedWatched}
+            />
           ))}
         </div>
       )}
-      {!loading && anime.length === 0 && (
+      {!loading && visibleAnime.length === 0 && (
         <div className="mt-12 text-center text-zinc-500">
           Ничего не найдено с этими фильтрами
         </div>

@@ -17,23 +17,25 @@ const KIND_LABELS: Record<string, string> = {
 
 export function AnimeCard({
   anime,
-  onStatusChange,
+  onMarkedWatched,
 }: {
   anime: RecommendedAnime;
-  onStatusChange?: () => void;
+  onMarkedWatched?: (animeId: number) => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [currentReaction, setCurrentReaction] = useState<Reaction | null>(
     anime.user_rate?.reaction ?? null
   );
-  const isWatched = anime.user_rate?.status === "completed";
+  const [markedWatched, setMarkedWatched] = useState(false);
+  const isWatched = anime.user_rate?.status === "completed" || markedWatched;
 
   function handleMarkWatched(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    setMarkedWatched(true);
+    onMarkedWatched?.(anime.id);
     startTransition(async () => {
       await markWatched(anime.id);
-      onStatusChange?.();
     });
   }
 
@@ -44,7 +46,6 @@ export function AnimeCard({
     setCurrentReaction(newReaction);
     startTransition(async () => {
       await recordSwipe(anime.id, newReaction ?? "skip");
-      onStatusChange?.();
     });
   }
 
