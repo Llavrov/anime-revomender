@@ -132,7 +132,7 @@ export function computeRecommendationScore(
   tropeProfile: TropeProfile,
   ratedAnime: AnimeWithRelations[]
 ): number {
-  // Genre affinity (0-1)
+  // Genre affinity (0-1) — no genres = penalty (not neutral)
   let genreScore = 0;
   if (anime.genres.length > 0) {
     let sum = 0;
@@ -141,6 +141,8 @@ export function computeRecommendationScore(
     }
     genreScore = sum / anime.genres.length;
   }
+  // No genre data = can't match = low score
+  const hasGenreData = anime.genres.length > 0;
 
   // Studio affinity (0-1)
   let studioScore = 0;
@@ -197,13 +199,18 @@ export function computeRecommendationScore(
     if (franchiseRated) franchiseBonus = 1;
   }
 
+  // If no genre data, heavily penalize — we can't trust the match
+  if (!hasGenreData) {
+    return communityScore * 0.15 + eraScore * 0.05;
+  }
+
   return (
-    genreScore * 0.25 +
-    communityScore * 0.20 +
+    genreScore * 0.35 +
     tropeScore * 0.15 +
-    eraScore * 0.12 +
+    communityScore * 0.15 +
     franchiseBonus * 0.13 +
-    studioScore * 0.10 +
-    kindScore * 0.05
+    eraScore * 0.10 +
+    studioScore * 0.08 +
+    kindScore * 0.04
   );
 }
