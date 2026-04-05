@@ -109,12 +109,20 @@ async function fetchAnimeWithRelations(
 }
 
 export async function getRecommendations(limit: number = 20): Promise<RecommendedAnime[]> {
+  const NOT_TODAY_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+  const now = Date.now();
   const allAnime = await fetchAnimeWithRelations();
 
   const rated = allAnime.filter((a) => a.user_rate !== null);
-  const unrated = allAnime.filter(
-    (a) => a.user_rate === null || (a.user_rate.score === 0 && a.user_rate.reaction === null)
-  );
+  const unrated = allAnime.filter((a) => {
+    if (!a.user_rate) return true;
+    if (a.user_rate.score === 0 && a.user_rate.reaction === null) return true;
+    // not_today expires after 12h
+    if (a.user_rate.reaction === "not_today") {
+      return now - new Date(a.user_rate.updated_at).getTime() > NOT_TODAY_COOLDOWN_MS;
+    }
+    return false;
+  });
 
   const genreProfile = buildGenreProfile(rated);
   const studioProfile = buildStudioProfile(rated);

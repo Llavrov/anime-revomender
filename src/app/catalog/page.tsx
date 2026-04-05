@@ -15,6 +15,18 @@ const defaultFilters: CatalogFilters = {
   hideRated: true,
 };
 
+const NOT_TODAY_COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+function SkeletonCard() {
+  return (
+    <div className="animate-pulse">
+      <div className="aspect-[3/4] rounded-lg bg-zinc-800" />
+      <div className="mt-1.5 h-4 w-3/4 rounded bg-zinc-800" />
+      <div className="mt-1 h-3 w-1/2 rounded bg-zinc-800" />
+    </div>
+  );
+}
+
 export default function CatalogPage() {
   const [anime, setAnime] = useState<RecommendedAnime[]>([]);
   const [filters, setFilters] = useState<CatalogFilters>(defaultFilters);
@@ -43,11 +55,18 @@ export default function CatalogPage() {
     }
 
     if (filters.hideRated) {
+      const now = Date.now();
       filtered = filtered.filter((a) => {
         if (!a.user_rate) return true;
         const r = a.user_rate;
-        // not_today is soft — still show in catalog
-        if (r.reaction && r.reaction !== "not_today") return false;
+
+        // not_today: hide for 12 hours from when it was set
+        if (r.reaction === "not_today") {
+          const setAt = new Date(r.updated_at).getTime();
+          return now - setAt > NOT_TODAY_COOLDOWN_MS;
+        }
+
+        if (r.reaction) return false;
         if (r.score > 0) return false;
         if (r.status === "completed") return false;
         return true;
@@ -70,7 +89,6 @@ export default function CatalogPage() {
       setHiddenIds((prev) => new Set(prev).add(animeId));
       setActionsCount((c) => c + 1);
 
-      // Auto-refresh recommendations 8s after last action
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
         setRefreshing(true);
@@ -91,24 +109,24 @@ export default function CatalogPage() {
   return (
     <div className="px-4 pt-4">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold">Каталог</h1>
+        <h1 className="text-lg font-bold">К��талог</h1>
         {actionsCount > 0 && (
           <button
             onClick={handleRefresh}
             disabled={refreshing}
             className="flex items-center gap-1.5 rounded-full bg-violet-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-violet-500 disabled:opacity-50"
           >
-            {refreshing ? (
-              "Обновляю..."
-            ) : (
-              <>Обновить рекомендации</>
-            )}
+            {refreshing ? "Обновляю..." : "Обновить рекоменда��ии"}
           </button>
         )}
       </div>
       <FilterBar filters={filters} onChange={setFilters} />
       {initialLoading ? (
-        <div className="mt-12 text-center text-zinc-500">Загрузка...</div>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {Array.from({ length: 15 }, (_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {visibleAnime.map((a) => (
