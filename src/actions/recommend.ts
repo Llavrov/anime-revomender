@@ -196,3 +196,67 @@ export async function getAllGenres(): Promise<Genre[]> {
   const { data } = await supabase.from("genres").select("*").order("russian");
   return data ?? [];
 }
+
+export type ProfileStats = {
+  totalRated: number;
+  likes: number;
+  dislikes: number;
+  skips: number;
+  topGenres: string[];
+  profileStrength: "weak" | "building" | "good" | "strong";
+  strongMatchCount: number;
+};
+
+export async function getProfileStats(): Promise<ProfileStats> {
+  const { data: rates } = await supabase.from("user_rates").select("*");
+  if (!rates) return { totalRated: 0, likes: 0, dislikes: 0, skips: 0, topGenres: [], profileStrength: "weak", strongMatchCount: 0 };
+
+  const likes = rates.filter((r) => r.reaction === "like" || (r.score && r.score >= 7)).length;
+  const dislikes = rates.filter((r) => r.reaction === "dislike" || (r.score && r.score > 0 && r.score <= 5)).length;
+  const skips = rates.filter((r) => r.reaction === "skip").length;
+  const totalRated = rates.length;
+
+  // Get top genres from liked anime
+  const likedIds = rates
+    .filter((r) => r.reaction === "like" || (r.score && r.score >= 7))
+    .map((r) => r.anime_id);
+
+  let topGenres: string[] = [];
+  if (likedIds.length > 0) {
+    const { data: genreLinks } = await supabase.from("anime_genres").select("genre_id").in("anime_id", likedIds);
+    const genreCounts = new Map<number, number>();
+    for (const link of genreLinks ?? []) {
+      genreCounts.set(link.genre_id, (genreCounts.get(link.genre_id) ?? 0) + 1);
+    }
+    const topIds = Array.from(genreCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id]) => id);
+    const { data: genres } = await supabase.from("genres").select("*").in("id", topIds);
+    topGenres = (genres ?? []).map((g) => g.russian || g.name);
+  }
+
+  // Profile strength based on unique signals (likes + dislikes matter most)
+  const signals = likes + dislikes;
+  const profileStrength: ProfileStats["profileStrength"] =
+    signals >= 80 ? "strong" : signals >= 40 ? "good" : signals >= 15 ? "building" : "weak";
+
+  // Count strong matches in remaining pool
+  const allAnime = await fetchAnimeWithRelations();
+  const rated = allAnime.filter((a) => a.user_rate !== null);
+  const unrated = allAnime.filter(
+    (a) => a.user_rate === null || (a.user_rate.score === 0 && a.user_rate.reaction === null)
+  );
+  const genreProfile = buildGenreProfile(rated);
+  const studioProfile = buildStudioProfile(rated);
+  const kindProfile = buildKindProfile(rated);
+  const eraProfile = buildEraProfile(rated);
+
+  let strongMatches = 0;
+  for (const anime of unrated) {
+    const score = computeRecommendationScore(anime, genreProfile, studioProfile, kindProfile, eraProfile, rated);
+    if (score >= 0.6) strongMatches++;
+  }
+
+  return { totalRated, likes, dislikes, skips, topGenres, profileStrength, strongMatchCount: strongMatches };
+}
