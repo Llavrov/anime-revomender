@@ -15,7 +15,14 @@ const supabase = createClient(
 
 async function main() {
   console.log("Fetching all anime...");
-  const { data: animeList } = await supabase.from("anime").select("*").limit(5000);
+  // Fetch all — Supabase defaults to 1000, need explicit range
+  const all: any[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data } = await supabase.from("anime").select("*").range(offset, offset + 999);
+    if (!data || data.length === 0) break;
+    all.push(...data);
+  }
+  const animeList = all;
   if (!animeList) { console.log("No anime"); return; }
 
   const animeIds = animeList.map((a) => a.id);
