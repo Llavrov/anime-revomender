@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AnimeCard } from "@/components/anime-card";
 import { FilterBar, type CatalogFilters } from "@/components/filter-bar";
 import { getCatalog } from "@/actions/recommend";
@@ -18,19 +18,18 @@ const defaultFilters: CatalogFilters = {
 export default function CatalogPage() {
   const [anime, setAnime] = useState<RecommendedAnime[]>([]);
   const [filters, setFilters] = useState<CatalogFilters>(defaultFilters);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const load = useCallback(async () => {
-    setLoading(true);
+    // Fetch more to compensate for filtered-out rated anime
     const data = await getCatalog({
       genreIds: filters.genreIds.length ? filters.genreIds : undefined,
       kinds: filters.kinds.length ? filters.kinds : undefined,
       minScore: filters.minScore || undefined,
       statuses: filters.statuses.length ? filters.statuses : undefined,
       sortBy: filters.sortBy,
-      limit: 100,
+      limit: 500,
     });
 
     let filtered = data;
@@ -45,7 +44,6 @@ export default function CatalogPage() {
       filtered = filtered.filter((a) => {
         if (!a.user_rate) return true;
         const r = a.user_rate;
-        // Hide if: has reaction (like/dislike/skip), has score, or marked completed
         if (r.reaction) return false;
         if (r.score > 0) return false;
         if (r.status === "completed") return false;
@@ -55,14 +53,13 @@ export default function CatalogPage() {
 
     setAnime(filtered);
     setHiddenIds(new Set());
-    setLoading(false);
+    setInitialLoading(false);
   }, [filters]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  // Optimistically hide a card and debounce the full reload
   const handleHideCard = useCallback(
     (animeId: number) => {
       if (filters.hideRated) {
@@ -78,7 +75,7 @@ export default function CatalogPage() {
     <div className="px-4 pt-4">
       <h1 className="mb-4 text-lg font-bold">Каталог</h1>
       <FilterBar filters={filters} onChange={setFilters} />
-      {loading ? (
+      {initialLoading ? (
         <div className="mt-12 text-center text-zinc-500">Загрузка...</div>
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -91,7 +88,7 @@ export default function CatalogPage() {
           ))}
         </div>
       )}
-      {!loading && visibleAnime.length === 0 && (
+      {!initialLoading && visibleAnime.length === 0 && (
         <div className="mt-12 text-center text-zinc-500">
           Ничего не найдено с этими фильтрами
         </div>

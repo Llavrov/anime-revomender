@@ -42,6 +42,8 @@ async function fetchAnimeWithRelations(
 
   if (filter?.limit) {
     query = query.limit(filter.limit);
+  } else {
+    query = query.limit(5000); // override Supabase default 1000
   }
 
   const { data: animeList, error } = await query;
@@ -50,13 +52,29 @@ async function fetchAnimeWithRelations(
 
   const animeIds = animeList.map((a) => a.id);
 
-  const [genreLinks, studioLinks, rates, genres, studios] = await Promise.all([
-    supabase.from("anime_genres").select("*").in("anime_id", animeIds),
-    supabase.from("anime_studios").select("*").in("anime_id", animeIds),
-    supabase.from("user_rates").select("*").in("anime_id", animeIds),
+  // Batch .in() queries to avoid Supabase URL length limits
+  async function batchIn<T>(table: string, column: string, ids: number[], select = "*"): Promise<T[]> {
+    const BATCH = 500;
+    const results: T[] = [];
+    for (let i = 0; i < ids.length; i += BATCH) {
+      const batch = ids.slice(i, i + BATCH);
+      const { data } = await supabase.from(table).select(select).in(column, batch);
+      if (data) results.push(...(data as T[]));
+    }
+    return results;
+  }
+
+  const [genreLinksData, studioLinksData, ratesData, genres, studios] = await Promise.all([
+    batchIn<{ anime_id: number; genre_id: number }>("anime_genres", "anime_id", animeIds),
+    batchIn<{ anime_id: number; studio_id: number }>("anime_studios", "anime_id", animeIds),
+    batchIn<UserRate>("user_rates", "anime_id", animeIds),
     supabase.from("genres").select("*"),
     supabase.from("studios").select("*"),
   ]);
+
+  const genreLinks = { data: genreLinksData };
+  const studioLinks = { data: studioLinksData };
+  const rates = { data: ratesData };
 
   const genreMap = new Map<number, Genre>((genres.data ?? []).map((g) => [g.id, g]));
   const studioMap = new Map<number, Studio>((studios.data ?? []).map((s) => [s.id, s]));
@@ -132,7 +150,10 @@ export async function getCatalog(filter?: {
   sortBy?: string;
   limit?: number;
 }): Promise<RecommendedAnime[]> {
-  const allAnime = await fetchAnimeWithRelations(filter);
+  // Fetch all anime (no limit) so filtering doesn't cut off good results
+  const allAnime = await fetchAnimeWithRelations({ ...filter, limit: undefined });
+
+  // Build profile from ALL rated anime for accurate recommendations
   const rated = allAnime.filter((a) => a.user_rate !== null);
 
   const genreProfile = buildGenreProfile(rated);
@@ -156,6 +177,10 @@ export async function getCatalog(filter?: {
     scored.sort((a, b) => b.recommendation_score - a.recommendation_score);
   }
 
+  // Apply limit after scoring and sorting
+  if (filter?.limit) {
+    return scored.slice(0, filter.limit);
+  }
   return scored;
 }
 
