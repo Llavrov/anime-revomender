@@ -12,6 +12,7 @@ const defaultFilters: CatalogFilters = {
   minScore: 0,
   statuses: [],
   sortBy: "recommendation",
+  hideWatched: true,
 };
 
 export default function CatalogPage() {
@@ -31,9 +32,16 @@ export default function CatalogPage() {
     });
 
     let filtered = data;
+
     if (filters.genreIds.length > 0) {
-      filtered = data.filter((a) =>
+      filtered = filtered.filter((a) =>
         filters.genreIds.every((gid) => a.genres.some((g) => g.id === gid))
+      );
+    }
+
+    if (filters.hideWatched) {
+      filtered = filtered.filter(
+        (a) => !a.user_rate || a.user_rate.status !== "completed"
       );
     }
 
@@ -47,20 +55,20 @@ export default function CatalogPage() {
 
   return (
     <div className="px-4 pt-4">
-      <h1 className="mb-4 text-lg font-bold">Catalog</h1>
+      <h1 className="mb-4 text-lg font-bold">Каталог</h1>
       <FilterBar filters={filters} onChange={setFilters} />
       {loading ? (
-        <div className="mt-12 text-center text-zinc-500">Loading...</div>
+        <div className="mt-12 text-center text-zinc-500">Загрузка...</div>
       ) : (
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {anime.map((a) => (
-            <AnimeCard key={a.id} anime={a} />
+            <AnimeCard key={a.id} anime={a} onStatusChange={load} />
           ))}
         </div>
       )}
       {!loading && anime.length === 0 && (
         <div className="mt-12 text-center text-zinc-500">
-          Nothing found with these filters
+          Ничего не найдено с этими фильтрами
         </div>
       )}
     </div>

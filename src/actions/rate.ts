@@ -19,3 +19,17 @@ export async function updateRate(
 
   if (error) throw new Error(`Failed to update rate: ${error.message}`);
 }
+
+export async function markWatched(animeId: number) {
+  const { error } = await supabase.from("user_rates").upsert(
+    {
+      anime_id: animeId,
+      status: "completed",
+      source: "manual",
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "anime_id" }
+  );
+
+  if (error) throw new Error(`Failed to mark watched: ${error.message}`);
+}

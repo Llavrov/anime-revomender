@@ -1,8 +1,53 @@
+"use client";
+
+import { useTransition, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { RecommendedAnime } from "@/lib/types";
+import type { RecommendedAnime, Reaction } from "@/lib/types";
+import { markWatched } from "@/actions/rate";
+import { recordSwipe } from "@/actions/swipe";
 
-export function AnimeCard({ anime }: { anime: RecommendedAnime }) {
+const KIND_LABELS: Record<string, string> = {
+  tv: "Сериал",
+  movie: "Фильм",
+  ova: "OVA",
+  ona: "ONA",
+  special: "Спецвыпуск",
+};
+
+export function AnimeCard({
+  anime,
+  onStatusChange,
+}: {
+  anime: RecommendedAnime;
+  onStatusChange?: () => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [currentReaction, setCurrentReaction] = useState<Reaction | null>(
+    anime.user_rate?.reaction ?? null
+  );
+  const isWatched = anime.user_rate?.status === "completed";
+
+  function handleMarkWatched(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    startTransition(async () => {
+      await markWatched(anime.id);
+      onStatusChange?.();
+    });
+  }
+
+  function handleReaction(e: React.MouseEvent, reaction: Reaction) {
+    e.preventDefault();
+    e.stopPropagation();
+    const newReaction = currentReaction === reaction ? null : reaction;
+    setCurrentReaction(newReaction);
+    startTransition(async () => {
+      await recordSwipe(anime.id, newReaction ?? "skip");
+      onStatusChange?.();
+    });
+  }
+
   return (
     <Link href={`/catalog/${anime.id}`} className="group block">
       <div className="relative aspect-[3/4] overflow-hidden rounded-lg">
@@ -12,7 +57,7 @@ export function AnimeCard({ anime }: { anime: RecommendedAnime }) {
             alt={anime.russian ?? anime.name}
             fill
             className="object-cover transition-transform group-hover:scale-105"
-            sizes="(max-width: 448px) 50vw, 200px"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 200px"
           />
         ) : (
           <div className="flex h-full items-center justify-center bg-zinc-800 text-zinc-600 text-xs">
@@ -24,9 +69,52 @@ export function AnimeCard({ anime }: { anime: RecommendedAnime }) {
             ★ {anime.score.toFixed(1)}
           </div>
         )}
-        {anime.user_rate && (
-          <div className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-xs text-green-400">
-            {anime.user_rate.score > 0 ? anime.user_rate.score : "✓"}
+
+        {/* Watched badge or mark-as-watched button */}
+        {isWatched ? (
+          <div className="absolute right-1.5 top-1.5 rounded bg-green-600/80 px-1.5 py-0.5 text-xs font-medium text-white">
+            ✓ Смотрел
+          </div>
+        ) : (
+          <button
+            onClick={handleMarkWatched}
+            disabled={isPending}
+            className="absolute right-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 text-xs text-zinc-300 opacity-0 transition-opacity hover:bg-black/80 group-hover:opacity-100 disabled:opacity-50"
+          >
+            {isPending ? "..." : "Смотрел"}
+          </button>
+        )}
+
+        {/* Like/Dislike overlay at bottom */}
+        <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={(e) => handleReaction(e, "dislike")}
+            disabled={isPending}
+            className={`flex h-7 w-7 items-center justify-center rounded-full text-sm transition-all ${
+              currentReaction === "dislike"
+                ? "bg-red-500 text-white"
+                : "bg-black/60 text-zinc-300 hover:bg-red-500/80 hover:text-white"
+            }`}
+          >
+            ✕
+          </button>
+          <button
+            onClick={(e) => handleReaction(e, "like")}
+            disabled={isPending}
+            className={`flex h-7 w-7 items-center justify-center rounded-full text-sm transition-all ${
+              currentReaction === "like"
+                ? "bg-green-500 text-white"
+                : "bg-black/60 text-zinc-300 hover:bg-green-500/80 hover:text-white"
+            }`}
+          >
+            ♥
+          </button>
+        </div>
+
+        {/* User score if exists */}
+        {anime.user_rate && anime.user_rate.score > 0 && (
+          <div className="absolute left-1.5 bottom-1.5 rounded bg-black/70 px-1.5 py-0.5 text-xs text-blue-400">
+            Моя: {anime.user_rate.score}
           </div>
         )}
       </div>
@@ -34,7 +122,7 @@ export function AnimeCard({ anime }: { anime: RecommendedAnime }) {
         {anime.russian ?? anime.name}
       </h3>
       <p className="mt-0.5 text-xs text-zinc-500">
-        {anime.kind?.toUpperCase()}
+        {KIND_LABELS[anime.kind] ?? anime.kind?.toUpperCase()}
         {anime.aired_on && ` · ${new Date(anime.aired_on).getFullYear()}`}
       </p>
     </Link>

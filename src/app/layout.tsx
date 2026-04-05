@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="ru" className="dark">
       <body className="min-h-screen bg-zinc-950 pb-16">
-        <main className="mx-auto max-w-md">{children}</main>
+        <main className="mx-auto max-w-5xl">{children}</main>
         <BottomNav />
       </body>
     </html>

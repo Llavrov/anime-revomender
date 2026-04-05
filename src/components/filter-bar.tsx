@@ -10,7 +10,22 @@ export type CatalogFilters = {
   minScore: number;
   statuses: string[];
   sortBy: string;
+  hideWatched: boolean;
 };
+
+const KIND_LABELS: Record<string, string> = {
+  tv: "Сериал",
+  movie: "Фильм",
+  ova: "OVA",
+  ona: "ONA",
+  special: "Спецвыпуск",
+};
+
+const SORT_OPTIONS = [
+  { value: "recommendation", label: "Для тебя" },
+  { value: "score", label: "По рейтингу" },
+  { value: "year", label: "По году" },
+];
 
 export function FilterBar({
   filters,
@@ -28,12 +43,9 @@ export function FilterBar({
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        {[
-          { value: "recommendation", label: "For you" },
-          { value: "score", label: "Rating" },
-          { value: "year", label: "Year" },
-        ].map((opt) => (
+      {/* Sort */}
+      <div className="flex flex-wrap gap-2">
+        {SORT_OPTIONS.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange({ ...filters, sortBy: opt.value })}
@@ -47,8 +59,10 @@ export function FilterBar({
           </button>
         ))}
       </div>
-      <div className="flex gap-2">
-        {["tv", "movie", "ova", "ona"].map((kind) => (
+
+      {/* Kind + hideWatched */}
+      <div className="flex flex-wrap items-center gap-2">
+        {Object.entries(KIND_LABELS).map(([kind, label]) => (
           <button
             key={kind}
             onClick={() => {
@@ -57,21 +71,36 @@ export function FilterBar({
                 : [...filters.kinds, kind];
               onChange({ ...filters, kinds });
             }}
-            className={`rounded-full px-3 py-1 text-xs uppercase transition-colors ${
+            className={`rounded-full px-3 py-1 text-xs transition-colors ${
               filters.kinds.includes(kind)
                 ? "bg-white text-black"
                 : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
             }`}
           >
-            {kind}
+            {label}
           </button>
         ))}
+
+        <div className="ml-auto">
+          <button
+            onClick={() => onChange({ ...filters, hideWatched: !filters.hideWatched })}
+            className={`rounded-full px-3 py-1 text-xs transition-colors ${
+              filters.hideWatched
+                ? "bg-violet-600 text-white"
+                : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+            }`}
+          >
+            {filters.hideWatched ? "Просмотренное скрыто" : "Показать всё"}
+          </button>
+        </div>
       </div>
+
+      {/* Genres */}
       <button
         onClick={() => setShowGenres(!showGenres)}
         className="text-xs text-zinc-400 hover:text-white"
       >
-        {showGenres ? "Hide genres ▲" : "Genres ▼"}
+        {showGenres ? "Скрыть жанры ▲" : "Жанры ▼"}
       </button>
       {showGenres && (
         <div className="flex flex-wrap gap-1.5">
@@ -95,8 +124,10 @@ export function FilterBar({
           ))}
         </div>
       )}
+
+      {/* Min score */}
       <div className="flex items-center gap-2 text-xs text-zinc-400">
-        <span>Min ★</span>
+        <span>Мин. ★</span>
         <input
           type="range"
           min={0}

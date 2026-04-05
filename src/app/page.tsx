@@ -72,7 +72,7 @@ export default function SwipePage() {
   }
 
   return (
-    <div className="px-4 pt-4">
+    <div className="mx-auto max-w-md px-4 pt-4">
       {/* Profile stats bar */}
       {stats && strength && (
         <div className="mb-3">
