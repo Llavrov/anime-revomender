@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase";
 import type { Reaction } from "@/lib/types";
+import { recomputeScores } from "@/actions/recommend";
 
 export async function recordSwipe(animeId: number, reaction: Reaction) {
   const { error } = await supabase.from("user_rates").upsert(
@@ -15,4 +16,9 @@ export async function recordSwipe(animeId: number, reaction: Reaction) {
   );
 
   if (error) throw new Error(`Failed to record swipe: ${error.message}`);
+
+  // Recompute scores in background after meaningful reactions
+  if (reaction === "like" || reaction === "dislike") {
+    recomputeScores().catch(() => {});
+  }
 }

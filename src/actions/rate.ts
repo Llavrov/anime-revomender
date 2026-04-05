@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase";
 import type { UserRateStatus } from "@/lib/types";
+import { recomputeScores } from "@/actions/recommend";
 
 export async function updateRate(
   animeId: number,
@@ -18,6 +19,11 @@ export async function updateRate(
   );
 
   if (error) throw new Error(`Failed to update rate: ${error.message}`);
+
+  // Score change affects recommendations
+  if (updates.score) {
+    recomputeScores().catch(() => {});
+  }
 }
 
 export async function markWatched(animeId: number) {
