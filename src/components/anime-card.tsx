@@ -39,6 +39,15 @@ export function AnimeCard({
     });
   }
 
+  function handleNotToday(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    onHideCard?.(anime.id);
+    startTransition(async () => {
+      await recordSwipe(anime.id, "not_today");
+    });
+  }
+
   function handleReaction(e: React.MouseEvent, reaction: Reaction) {
     e.preventDefault();
     e.stopPropagation();
@@ -90,8 +99,16 @@ export function AnimeCard({
           </button>
         )}
 
-        {/* Like/Dislike overlay at bottom */}
+        {/* Actions overlay at bottom */}
         <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={handleNotToday}
+            disabled={isPending}
+            className="flex h-7 items-center justify-center rounded-full bg-black/60 px-2 text-[10px] text-zinc-300 hover:bg-zinc-600 hover:text-white"
+            title="Не сегодня"
+          >
+            Потом
+          </button>
           <button
             onClick={(e) => handleReaction(e, "dislike")}
             disabled={isPending}

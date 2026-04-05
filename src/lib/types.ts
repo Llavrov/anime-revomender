@@ -1,7 +1,7 @@
 export type AnimeKind = "tv" | "movie" | "ova" | "ona" | "special";
 export type AnimeStatus = "released" | "ongoing" | "anons";
 export type UserRateStatus = "completed" | "watching" | "planned" | "on_hold" | "dropped";
-export type Reaction = "like" | "dislike" | "skip";
+export type Reaction = "like" | "dislike" | "skip" | "not_today";
 
 export type Anime = {
   id: number;
